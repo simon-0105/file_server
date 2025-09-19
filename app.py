@@ -6,7 +6,7 @@ from urllib.parse import quote, unquote
 
 app = Flask(__name__)
 
-# 为 CSRF 保护设置一个密钥。这应该是一个复杂的、保密的值。
+# 为 CSRF 保护设置一个密钥。
 # 在生产环境中，建议从环境变量或配置文件中加载。
 app.config['SECRET_KEY'] = 'opm2zOLF/IQu5bf6Yy7t+zQKD5DcJ1YF'
 csrf = CSRFProtect(app)
@@ -40,7 +40,7 @@ def sign():
     return render_template('sign.html')
 
 @app.route('/save-text', methods=['POST'])
-@csrf.exempt # 对于 AJAX 请求，我们手动处理，所以暂时排除 CSRF 检查
+@csrf.exempt # 对于 AJAX 请求，手动处理
 def save_text():
     """处理文本保存请求"""
     data = request.json
@@ -58,7 +58,7 @@ def save_text():
         return jsonify({'status': 'error', 'message': f'保存失败: {e}'}), 500
 
 @app.route('/upload-file', methods=['POST'])
-@csrf.exempt # 对于 AJAX 请求，我们手动处理，所以暂时排除 CSRF 检查
+@csrf.exempt # 对于 AJAX 请求，手动处理
 def upload_file():
     """处理文件上传请求，支持中文文件名"""
     if 'file' not in request.files:
@@ -122,11 +122,9 @@ def serve_file(filename):
 def download_file(filename):
     """
     提供文件下载功能。    
-    """
-    # 对文件名进行 URL 解码
+    """    
     # decoded_filename = unquote(filename)
-    # if filename in os.listdir(DOWNLAOD_FOLDER):
-    if True:
+    if filename in os.listdir(DOWNLAOD_FOLDER):    
         # 从文本文件夹下载
         return send_from_directory(DOWNLAOD_FOLDER, filename, as_attachment=True)    
     else:

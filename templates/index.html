@@ -39,7 +39,11 @@
 <body>
     <div class="container">
         <h1>内部文件服务器</h1>
-        <p><a href="{{ url_for('list_files') }}">查看服务器文件列表</a></p>
+        <p>
+            <a href="{{ url_for('list_files') }}">查看服务器文件列表</a>
+            &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            <a href="{{ url_for('sign') }}">数字钱包签名</a>
+        </p>
 
         <h2>保存文本</h2>
         <textarea id="myTextarea" placeholder="在这里输入文本..."></textarea>
