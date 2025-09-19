@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内部文件服务器</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: auto; }
+        h2 { border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; padding: 10px; box-sizing: border-box; }
+        button { padding: 10px 15px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background-color: #f4f4f4; }
+        
+        /* 重点修改这里 */
+        .file-input-wrapper {
+            position: relative; /* 启用相对定位 */
+            overflow: hidden;   /* 隐藏超出部分 */
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px 15px;
+            background-color: #f4f4f4;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute; /* 绝对定位，覆盖父元素 */
+            left: 0;
+            top: 0;
+            opacity: 0;         /* 设为透明 */
+            cursor: pointer;
+            font-size: 100px;   /* 增大尺寸，确保能点击 */
+        }
+
+        #status-text, #status-file { margin-top: 10px; font-weight: bold; }
+        a { text-decoration: none; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>内部文件服务器</h1>
+        <p><a href="{{ url_for('list_files') }}">查看服务器文件列表</a></p>
+
+        <h2>保存文本</h2>
+        <textarea id="myTextarea" placeholder="在这里输入文本..."></textarea>
+        <button onclick="saveText()">保存到文件</button>
+        <div id="status-text"></div>
+
+        <hr>
+
+        <h2>上传文件</h2>
+        <form id="uploadForm" style="display: flex; gap: 10px; align-items: center;">        
+            <div class="file-input-wrapper">
+                选择文件...
+                <input type="file" id="myFile" name="file">
+            </div>
+            <button type="button" onclick="uploadFile()">上传</button>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+
+        <div id="fileInfo" style="margin-top: 10px; font-style: italic;"></div>
+        <div id="progressContainer" style="width: 100%; height: 20px; border: 1px solid #ccc; margin-top: 10px; display: none;">
+            <div id="progressBar" style="width: 0%; height: 100%; background-color: #4CAF50; text-align: center; color: white; line-height: 20px;">0%</div>
+        </div>
+        <div id="status-file" style="margin-top: 10px; font-weight: bold;"></div>
+    </div>
+
+    <script>
+        // 保存文本函数
+        async function saveText() {
+            const textarea = document.getElementById('myTextarea');
+            const text = textarea.value;
+            const statusDiv = document.getElementById('status-text');
+
+            if (text.trim() === '') {
+                statusDiv.textContent = '文本内容不能为空。';
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ url_for("save_text") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const result = await response.json();
+                statusDiv.textContent = result.message;
+                statusDiv.style.color = result.status === 'success' ? 'green' : 'red';
+                if (result.status === 'success') {
+                    textarea.value = '';
+                }
+            } catch (error) {
+                statusDiv.textContent = `网络或服务器错误: ${error}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        // 新增：监听文件选择事件
+        document.getElementById('myFile').addEventListener('change', function() {
+            const fileInfoDiv = document.getElementById('fileInfo');
+            const file = this.files[0];
+            if (file) {
+                fileInfoDiv.textContent = `已选择文件: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            } else {
+                fileInfoDiv.textContent = '';
+            }
+        });
+
+        // 修改：上传文件函数，添加进度条逻辑
+        function uploadFile() { // 将 async 移除
+            const fileInput = document.getElementById('myFile');
+            const file = fileInput.files[0];
+            const statusDiv = document.getElementById('status-file');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+
+            if (!file) {
+                statusDiv.textContent = '请先选择一个文件。';
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            // 隐藏状态信息，显示进度条
+            statusDiv.textContent = '';
+            progressContainer.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+
+            // 监听上传进度
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete.toFixed(0) + '%';
+                    progressBar.textContent = percentComplete.toFixed(0) + '%';
+                }
+            }, false);
+
+            // 监听上传完成或失败
+            xhr.onload = function() {
+                progressContainer.style.display = 'none'; // 隐藏进度条
+                const result = JSON.parse(xhr.responseText);
+                statusDiv.textContent = result.message;
+                statusDiv.style.color = result.status === 'success' ? 'green' : 'red';
+                if (result.status === 'success') {
+                    document.getElementById('uploadForm').reset();
+                    document.getElementById('fileInfo').textContent = '';
+                }
+            };
+
+            xhr.onerror = function() {
+                progressContainer.style.display = 'none';
+                statusDiv.textContent = '网络或服务器错误。';
+                statusDiv.style.color = 'red';
+            };
+
+            // 发送请求
+            xhr.open('POST', '{{ url_for("upload_file") }}');
+            xhr.send(formData);
+        }
+    </script>
+</body>
+</html>

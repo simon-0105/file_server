@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaMask 消息签名</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        textarea {
+            width: 80%;
+            height: 100px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>MetaMask 消息签名示例</h1>
+    <p>请在下方输入您想要签名的消息，然后点击按钮。</p>
+
+    <textarea id="messageInput" placeholder="在此处输入待签名的消息..."></textarea>
+    <br>
+    <button id="signButton">签名消息</button>
+    <p id="status"></p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const signButton = document.getElementById('signButton');
+            const messageInput = document.getElementById('messageInput');
+            const statusText = document.getElementById('status');
+            
+            // 检查浏览器是否已安装 MetaMask
+            if (typeof window.ethereum !== 'undefined') {
+                statusText.textContent = '检测到 MetaMask，请点击按钮进行签名。';
+            } else {
+                statusText.textContent = '未检测到 MetaMask。请先安装 MetaMask 扩展。';
+                signButton.disabled = true;
+                return;
+            }
+
+            signButton.addEventListener('click', async () => {
+                const message = messageInput.value;
+                if (!message) {
+                    statusText.textContent = '请输入要签名的消息！';
+                    return;
+                }
+
+                try {
+                    // 请求用户授权连接 MetaMask
+                    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                    const account = accounts[0];
+                    statusText.textContent = `已连接账户: ${account}`;
+                    
+                    // 将消息转换为十六进制，以兼容 MetaMask 的签名方法
+                    const hexMessage = '0x' + Array.from(new TextEncoder().encode(message), byte => byte.toString(16).padStart(2, '0')).join('');
+
+                    // 使用 personal_sign 方法进行签名
+                    const signature = await ethereum.request({
+                        method: 'personal_sign',
+                        params: [hexMessage, account],
+                    });
+
+                    statusText.innerHTML = `
+                        签名成功！
+                        <br>
+                        <strong>签名结果：</strong><br>${signature}
+                    `;
+                    console.log('签名结果:', signature);
+                    
+                } catch (error) {
+                    if (error.code === 4001) {
+                        statusText.textContent = '用户拒绝了签名请求。';
+                    } else {
+                        statusText.textContent = `签名失败: ${error.message}`;
+                    }
+                    console.error('签名出错:', error);
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内部文件服务器</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: auto; }
+        h2 { border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 5px; }
+        a { text-decoration: none; color: #007bff; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; }
+        .file-item a { flex-grow: 1; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>服务器文件列表</h1>
+        <p><a href="{{ url_for('index') }}">返回主页</a></p>
+
+        <h2>已保存的文本文件</h2>
+        {% if saved_texts %}
+        <ul>
+            {% for encoded_name, decoded_name in saved_texts %}
+            <li class="file-item">
+                <a href="{{ url_for('serve_file', filename=encoded_name | safe) }}">{{ decoded_name }}</a>
+                <!--<a href="/files/{{ encoded_name }}">{{ decoded_name }}</a>-->
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>没有已保存的文本文件。</p>
+        {% endif %}
+
+        <hr>
+
+        <h2>已上传的文件</h2>
+        {% if uploaded_files %}
+        <ul>
+            {% for encoded_name, decoded_name in uploaded_files %}  
+            <script>
+                
+            </script>                      
+            <li class="file-item">                
+                <a href="{{ url_for('serve_file', filename=encoded_name) }}">{{ decoded_name }}</a>
+                <!-- <a href="/files/{{ encoded_name }}" >{{ decoded_name }}</a> -->
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>没有已上传的文件。</p>
+        {% endif %}
+
+        <h2>文件下载</h2>
+        {% if download_files %}
+        <ul>
+            {% for encoded_name, decoded_name in download_files %}
+            <li class="file-item">
+                <span>{{ decoded_name }}</span>
+                <a href="{{ url_for('download_file', filename=encoded_name | safe) }}">下载</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>没有已上传的文件。</p>
+        {% endif %}
+    </div>
+</body>
+</html>
